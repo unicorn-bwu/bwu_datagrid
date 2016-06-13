@@ -54,6 +54,8 @@ class BwuDatagrid extends PolymerElement {
 
   static const String defaultThemeName = 'bwu-datagrid-default-theme';
 
+  static const String IGNORE_STYLE_SCOPE = ":not(.style-scope)";
+
   /// The name of a style module to be used by the datagrids local DOM
   @Property(observer: 'themeChanged')
   String theme = defaultThemeName;
@@ -441,7 +443,7 @@ class BwuDatagrid extends PolymerElement {
       _headerScroller
         ..onContextMenu.listen(_handleHeaderContextMenu)
         ..onClick.listen(_handleHeaderClick)
-        ..querySelectorAll(".bwu-datagrid-header-column")
+        ..querySelectorAll(".bwu-datagrid-header-column${IGNORE_STYLE_SCOPE}")
             .forEach((dom.Element e) {
           e
             ..onMouseEnter.listen(_handleHeaderMouseEnter)
@@ -760,7 +762,7 @@ class BwuDatagrid extends PolymerElement {
     }
 
     _headers
-        .querySelectorAll(".bwu-datagrid-header-column")
+        .querySelectorAll(".bwu-datagrid-header-column${IGNORE_STYLE_SCOPE}")
         .forEach((dom.Element e) {
       // TODO check self/this
       Column columnDef = (e as BwuDatagridHeaderColumn).column;
@@ -773,7 +775,7 @@ class BwuDatagrid extends PolymerElement {
     _headers.style.width = "${_getHeadersWidth()}px";
 
     _headerRow
-        .querySelectorAll(".bwu-datagrid-headerrow-column")
+        .querySelectorAll(".bwu-datagrid-headerrow-column${IGNORE_STYLE_SCOPE}")
         .forEach((dom.Element e) {
       // TODO check self/this
       Column columnDef = (e as BwuDatagridHeaderrowColumn).column;
@@ -867,7 +869,7 @@ class BwuDatagrid extends PolymerElement {
         return;
       }
 
-      final BwuDatagridHeaderColumn col = utils.closest(
+      final BwuDatagridHeaderColumn col = tw_bwu_closest(
               (e.target as dom.Element), '.bwu-datagrid-header-column')
           as BwuDatagridHeaderColumn;
       if (col.children.length == 0) {
@@ -1637,6 +1639,81 @@ class BwuDatagrid extends PolymerElement {
       _handleScroll();
     }
   }
+
+  // ===============================================================================================
+  // Local Modifications -- new functions
+  // ===============================================================================================
+  /**
+   * Trustwave Local Mod to fix columns on 2nd display
+   */
+  void reshowGrid() {
+    if (_initialized) {
+      invalidateAllRows();
+      //_createColumnHeaders();
+      _removeCssRules();
+      _createCssRules();
+      resizeCanvas();
+      _applyColumnWidths();
+
+      _handleScroll();
+    }
+  }
+
+  /**
+   * Trustwave Local Mod to fix column selection
+   */
+  dom.HtmlElement tw_bwu_closest(dom.HtmlElement e, String selector,
+                             {dom.HtmlElement context, bool goThroughShadowBoundaries: false}) {
+    dom.HtmlElement curr = e;
+
+    print("---bwu---> ${selector}");
+    String xselector = "${selector}${IGNORE_STYLE_SCOPE}";
+
+    if (context != null) {
+      //print('tools.closest: context not yet supported: ${context}');
+    }
+
+    dom.Node p = curr.parentNode;
+    if (p is dom.ShadowRoot) {
+      p = (p as dom.ShadowRoot).host;
+    }
+
+    dom.HtmlElement parent = (p as dom.HtmlElement);
+
+    var prevParent = e;
+    var found;
+    while (parent != null && found == null) {
+      print("---bwu---> parent: ${parent}, prevParent: ${prevParent}");
+      found = parent.querySelector(xselector);
+      print("---bwu------> found: ${found}");
+      if (found != null) {
+        if (parent.querySelectorAll(xselector).contains(prevParent)) {
+          print("---bwu------> returning: ${prevParent}");
+          return prevParent;
+        } else {
+          return found;
+        }
+      } else {
+        if (parent.querySelectorAll(xselector).contains(prevParent)) {
+          return prevParent;
+        }
+      }
+      prevParent = parent;
+
+      if (parent is dom.ShadowRoot) {
+        if (goThroughShadowBoundaries) {
+          parent = (parent as dom.ShadowRoot).host;
+        }
+      } else {
+        parent = parent.parent;
+      }
+    }
+
+    return found;
+  }
+  // ===============================================================================================
+  // ===============================================================================================
+  // ===============================================================================================
 
   GridOptions get getGridOptions => _gridOptions;
 
@@ -2471,7 +2548,7 @@ class BwuDatagrid extends PolymerElement {
       _rowsCache[rows[i]].rowNode = parentNode.append(x.firstChild);
       _rowsCache[rows[i]]
           .rowNode
-          .querySelectorAll(".bwu-datagrid-cell")
+          .querySelectorAll(".bwu-datagrid-cell${IGNORE_STYLE_SCOPE}")
           .forEach((dom.Element e) {
         e
           ..onMouseEnter.listen(_handleMouseEnter)
@@ -2756,7 +2833,7 @@ class BwuDatagrid extends PolymerElement {
 
   void _handleMouseWheel(dom.MouseEvent e) {
     final dom.Element rowNode =
-        utils.closest((e.target as dom.Element), '.bwu-datagrid-row');
+        tw_bwu_closest((e.target as dom.Element), '.bwu-datagrid-row');
     if (rowNode != _rowNodeFromLastMouseWheelEvent) {
       if (_zombieRowNodeFromLastMouseWheelEvent != null &&
           _zombieRowNodeFromLastMouseWheelEvent != rowNode) {
@@ -3021,7 +3098,7 @@ class BwuDatagrid extends PolymerElement {
   }
 
   void _handleHeaderContextMenu(dom.MouseEvent e) {
-    final BwuDatagridHeaderColumn header = utils.closest(
+    final BwuDatagridHeaderColumn header = tw_bwu_closest(
             (e.target as dom.Element),
             ".bwu-datagread-header-column" /*, ".bwu-datagrid-header-columns"*/)
         as BwuDatagridHeaderColumn;
@@ -3031,7 +3108,7 @@ class BwuDatagrid extends PolymerElement {
   }
 
   void _handleHeaderClick(dom.MouseEvent e) {
-    final BwuDatagridHeaderColumn header = utils.closest(
+    final BwuDatagridHeaderColumn header = tw_bwu_closest(
             (e.target as dom.Element),
             '.bwu-datagrid-header-column' /*, ".bwu-datagrid-header-columns"*/)
         as BwuDatagridHeaderColumn;
@@ -3104,7 +3181,7 @@ class BwuDatagrid extends PolymerElement {
 
   Cell getCellFromTarget(dom.Element t) {
     final dom.Element cellElement =
-        utils.closest(t, '.bwu-datagrid-cell', context: _canvas);
+        tw_bwu_closest(t, '.bwu-datagrid-cell', context: _canvas);
     if (cellElement == null) {
       return null;
     }
